@@ -47,6 +47,14 @@ nreverse = (lst) ->
     lst = tmp
   ret
 
+pairlis = (lst1, lst2) ->
+  ret = kNil
+  while lst1.tag is 'cons' and lst2.tag is 'cons'
+    ret = makeCons(makeCons(lst1.car, lst2.car), ret)
+    lst1 = lst1.cdr
+    lst2 = lst2.cdr
+  nreverse(ret)
+
 isDelimiter = (c) ->
   c is kLPar or c is kRPar or c is kQuote or /\s+/.test(c)
 
@@ -157,6 +165,8 @@ eval1 = (obj, env) ->
     if eval1(safeCar(args), env) is kNil
       return eval1(safeCar(safeCdr(safeCdr(args))), env)
     return eval1(safeCar(safeCdr(args)), env)
+  else if op is makeSym('lambda')
+    return makeExpr(args, env)
   apply(eval1(op, env), evlis(args, env), env)
 
 evlis = (lst, env) ->
@@ -169,6 +179,13 @@ evlis = (lst, env) ->
     lst = lst.cdr
   nreverse(ret)
 
+progn = (body, env) ->
+  ret = kNil
+  while body.tag is 'cons'
+    ret = eval1(body.car, env)
+    body = body.cdr
+  ret
+
 apply = (fn, args, env) ->
   if fn.tag is 'error'
     fn
@@ -176,6 +193,8 @@ apply = (fn, args, env) ->
     args
   else if fn.tag is 'subr'
     fn.data(args)
+  else if fn.tag is 'expr'
+    progn(fn.body, makeCons(pairlis(fn.args, args), fn.env))
   else
     makeError('noimpl')
 
