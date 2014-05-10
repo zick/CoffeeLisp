@@ -167,6 +167,11 @@ eval1 = (obj, env) ->
     return eval1(safeCar(safeCdr(args)), env)
   else if op is makeSym('lambda')
     return makeExpr(args, env)
+  else if op is makeSym('defun')
+    expr = makeExpr(safeCdr(args), env)
+    sym = safeCar(args)
+    addToEnv(sym, expr, g_env)
+    return sym
   apply(eval1(op, env), evlis(args, env), env)
 
 evlis = (lst, env) ->
