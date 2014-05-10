@@ -172,6 +172,15 @@ eval1 = (obj, env) ->
     sym = safeCar(args)
     addToEnv(sym, expr, g_env)
     return sym
+  else if op is makeSym('setq')
+    val = eval1(safeCar(safeCdr(args)), env)
+    sym = safeCar(args)
+    bind = findVar(sym, env)
+    if bind is kNil
+      addToEnv(sym, val, g_env)
+    else
+      bind.cdr = val
+    return val
   apply(eval1(op, env), evlis(args, env), env)
 
 evlis = (lst, env) ->
