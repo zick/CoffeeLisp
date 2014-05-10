@@ -221,9 +221,72 @@ subrCdr = (args) ->
 subrCons = (args) ->
   makeCons(safeCar(args), safeCar(safeCdr(args)))
 
+subrEq = (args) ->
+  x = safeCar(args)
+  y = safeCar(safeCdr(args))
+  if x.tag is 'num' and y.tag is 'num'
+    if x.data is y.data
+      makeSym('t')
+    else
+      kNil
+  else if x is y
+    makeSym('t')
+  else
+    kNil
+
+subrAtom = (args) ->
+  if safeCar(args).tag is 'cons'
+    kNil
+  else
+    makeSym('t')
+
+subrNumberp = (args) ->
+  if safeCar(args).tag is 'num'
+    makeSym('t')
+  else
+    kNil
+
+subrSymbolp = (args) ->
+  if safeCar(args).tag is 'sym'
+    makeSym('t')
+  else
+    kNil
+
+subrAddOrMul = (fn, init_val) ->
+  (args) ->
+    ret = init_val
+    while args.tag is 'cons'
+      if args.car.tag isnt 'num'
+        return makeError('wrong type')
+      ret = fn(ret, args.car.data)
+      args = args.cdr
+    makeNum(ret)
+subrAdd = subrAddOrMul(((x, y) -> x + y), 0)
+subrMul = subrAddOrMul(((x, y) -> x * y), 1)
+
+subrSubOrDivOrMod = (fn) ->
+  (args) ->
+    x = safeCar(args)
+    y = safeCar(safeCdr(args))
+    if x.tag isnt 'num' or y.tag isnt 'num'
+      return makeError('wrong type')
+    makeNum(fn(x.data, y.data))
+subrSub = subrSubOrDivOrMod((x, y) -> x - y)
+subrDiv = subrSubOrDivOrMod((x, y) -> x / y)
+subrMod = subrSubOrDivOrMod((x, y) -> x % y)
+
 addToEnv(makeSym('car'), makeSubr(subrCar), g_env)
 addToEnv(makeSym('cdr'), makeSubr(subrCdr), g_env)
 addToEnv(makeSym('cons'), makeSubr(subrCons), g_env)
+addToEnv(makeSym('eq'), makeSubr(subrEq), g_env)
+addToEnv(makeSym('atom'), makeSubr(subrAtom), g_env)
+addToEnv(makeSym('numberp'), makeSubr(subrNumberp), g_env)
+addToEnv(makeSym('symbolp'), makeSubr(subrSymbolp), g_env)
+addToEnv(makeSym('+'), makeSubr(subrAdd), g_env)
+addToEnv(makeSym('*'), makeSubr(subrMul), g_env)
+addToEnv(makeSym('-'), makeSubr(subrSub), g_env)
+addToEnv(makeSym('/'), makeSubr(subrDiv), g_env)
+addToEnv(makeSym('mod'), makeSubr(subrMod), g_env)
 addToEnv(makeSym('t'), makeSym('t'), g_env)
 
 stdin = process.openStdin()
