@@ -22,7 +22,7 @@ sym_table = {}
 makeSym = (str) ->
   if str is 'nil'
     return kNil
-  if str not in sym_table
+  if not sym_table[str]
     sym_table[str] = { tag: 'sym', data: str }
   return sym_table[str]
 
@@ -125,10 +125,36 @@ printList = (obj) ->
   else
     '(' + ret + ' . ' + printObj(obj) + ')'
 
+findVar = (sym, env) ->
+  while env.tag is 'cons'
+    alist = env.car
+    while alist.tag is 'cons'
+      if alist.car.car is sym
+        return alist.car
+      alist = alist.cdr
+    env = env.cdr
+  kNil
+
+g_env = makeCons(kNil, kNil)
+
+addToEnv = (sym, val, env) ->
+  env.car = makeCons(makeCons(sym, val), env.car)
+
+eval1 = (obj, env) ->
+  if obj.tag is 'nil' or obj.tag is 'num' or obj.tag is 'error'
+    return obj
+  else if obj.tag is 'sym'
+    bind = findVar(obj, env)
+    if bind is kNil
+      return makeError(obj.data + ' has no value')
+    return bind.cdr
+  makeError('noimpl')
+
+addToEnv(makeSym('t'), makeSym('t'), g_env)
+
 stdin = process.openStdin()
 stdin.setEncoding 'utf8'
 process.stdout.write('> ')
 stdin.on 'data', (input) ->
-  process.stdout.write(input)
-  console.log(printObj(read(input)[0]))
+  console.log(printObj(eval1(read(input)[0], g_env)))
   process.stdout.write('> ')
