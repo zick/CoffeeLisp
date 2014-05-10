@@ -9,7 +9,7 @@ safeCar = (obj) ->
   else
     kNil
 
-safeCar = (obj) ->
+safeCdr = (obj) ->
   if obj.tag is 'cons'
     obj.cdr
   else
@@ -148,8 +148,49 @@ eval1 = (obj, env) ->
     if bind is kNil
       return makeError(obj.data + ' has no value')
     return bind.cdr
-  makeError('noimpl')
 
+  op = safeCar(obj)
+  args = safeCdr(obj)
+  if op is makeSym('quote')
+    return safeCar(args)
+  else if op is makeSym('if')
+    if eval1(safeCar(args), env) is kNil
+      return eval1(safeCar(safeCdr(safeCdr(args))), env)
+    return eval1(safeCar(safeCdr(args)), env)
+  apply(eval1(op, env), evlis(args, env), env)
+
+evlis = (lst, env) ->
+  ret = kNil
+  while lst.tag is 'cons'
+    elm = eval1(lst.car, env)
+    if elm.tag is 'error'
+      return elm
+    ret = makeCons(elm, ret)
+    lst = lst.cdr
+  nreverse(ret)
+
+apply = (fn, args, env) ->
+  if fn.tag is 'error'
+    fn
+  else if args.tag is 'error'
+    args
+  else if fn.tag is 'subr'
+    fn.data(args)
+  else
+    makeError('noimpl')
+
+subrCar = (args) ->
+  safeCar(safeCar(args))
+
+subrCdr = (args) ->
+  safeCdr(safeCar(args))
+
+subrCons = (args) ->
+  makeCons(safeCar(args), safeCar(safeCdr(args)))
+
+addToEnv(makeSym('car'), makeSubr(subrCar), g_env)
+addToEnv(makeSym('cdr'), makeSubr(subrCdr), g_env)
+addToEnv(makeSym('cons'), makeSubr(subrCons), g_env)
 addToEnv(makeSym('t'), makeSym('t'), g_env)
 
 stdin = process.openStdin()
