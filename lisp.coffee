@@ -26,6 +26,13 @@ makeSym = (str) ->
     sym_table[str] = { tag: 'sym', data: str }
   return sym_table[str]
 
+sym_t = makeSym('t')
+sym_quote = makeSym('quote')
+sym_if = makeSym('if')
+sym_lambda = makeSym('lambda')
+sym_defun = makeSym('defun')
+sym_setq = makeSym('setq')
+
 makeNum = (num) ->
   { tag: 'num', data: num }
 
@@ -87,7 +94,7 @@ read = (str) ->
     readList(str[1...])
   else if str[0] is kQuote
     [elm, next] = read(str[1...])
-    [makeCons(makeSym('quote'), makeCons(elm, kNil)), next]
+    [makeCons(sym_quote, makeCons(elm, kNil)), next]
   else
     readAtom(str)
 
@@ -159,20 +166,20 @@ eval1 = (obj, env) ->
 
   op = safeCar(obj)
   args = safeCdr(obj)
-  if op is makeSym('quote')
+  if op is sym_quote
     return safeCar(args)
-  else if op is makeSym('if')
+  else if op is sym_if
     if eval1(safeCar(args), env) is kNil
       return eval1(safeCar(safeCdr(safeCdr(args))), env)
     return eval1(safeCar(safeCdr(args)), env)
-  else if op is makeSym('lambda')
+  else if op is sym_lambda
     return makeExpr(args, env)
-  else if op is makeSym('defun')
+  else if op is sym_defun
     expr = makeExpr(safeCdr(args), env)
     sym = safeCar(args)
     addToEnv(sym, expr, g_env)
     return sym
-  else if op is makeSym('setq')
+  else if op is sym_setq
     val = eval1(safeCar(safeCdr(args)), env)
     sym = safeCar(args)
     bind = findVar(sym, env)
@@ -226,11 +233,11 @@ subrEq = (args) ->
   y = safeCar(safeCdr(args))
   if x.tag is 'num' and y.tag is 'num'
     if x.data is y.data
-      makeSym('t')
+      sym_t
     else
       kNil
   else if x is y
-    makeSym('t')
+    sym_t
   else
     kNil
 
@@ -238,17 +245,17 @@ subrAtom = (args) ->
   if safeCar(args).tag is 'cons'
     kNil
   else
-    makeSym('t')
+    sym_t
 
 subrNumberp = (args) ->
   if safeCar(args).tag is 'num'
-    makeSym('t')
+    sym_t
   else
     kNil
 
 subrSymbolp = (args) ->
   if safeCar(args).tag is 'sym'
-    makeSym('t')
+    sym_t
   else
     kNil
 
@@ -287,7 +294,7 @@ addToEnv(makeSym('*'), makeSubr(subrMul), g_env)
 addToEnv(makeSym('-'), makeSubr(subrSub), g_env)
 addToEnv(makeSym('/'), makeSubr(subrDiv), g_env)
 addToEnv(makeSym('mod'), makeSubr(subrMod), g_env)
-addToEnv(makeSym('t'), makeSym('t'), g_env)
+addToEnv(sym_t, sym_t, g_env)
 
 stdin = process.openStdin()
 stdin.setEncoding 'utf8'
