@@ -32,6 +32,9 @@ sym_if = makeSym('if')
 sym_lambda = makeSym('lambda')
 sym_defun = makeSym('defun')
 sym_setq = makeSym('setq')
+sym_loop = makeSym('loop')
+sym_return = makeSym('return')
+loop_val = kNil
 
 makeNum = (num) ->
   { tag: 'num', data: num }
@@ -169,7 +172,10 @@ eval1 = (obj, env) ->
   if op is sym_quote
     return safeCar(args)
   else if op is sym_if
-    if eval1(safeCar(args), env) is kNil
+    c = eval1(safeCar(args), env)
+    if c.tag is 'error'
+      return c
+    else if c is kNil
       return eval1(safeCar(safeCdr(safeCdr(args))), env)
     return eval1(safeCar(safeCdr(args)), env)
   else if op is sym_lambda
@@ -181,6 +187,8 @@ eval1 = (obj, env) ->
     return sym
   else if op is sym_setq
     val = eval1(safeCar(safeCdr(args)), env)
+    if val.tag is 'error'
+      return val
     sym = safeCar(args)
     bind = findVar(sym, env)
     if bind is kNil
@@ -188,6 +196,11 @@ eval1 = (obj, env) ->
     else
       bind.cdr = val
     return val
+  else if op is sym_loop
+    return loop1(args, env)
+  else if op is sym_return
+    loop_val = eval1(safeCar(args), env)
+    return makeError('')
   apply(eval1(op, env), evlis(args, env), env)
 
 evlis = (lst, env) ->
@@ -204,8 +217,18 @@ progn = (body, env) ->
   ret = kNil
   while body.tag is 'cons'
     ret = eval1(body.car, env)
+    if ret.tag is 'error'
+      return ret
     body = body.cdr
   ret
+
+loop1 = (body, env) ->
+  while true
+    ret = progn(body, env)
+    if ret.tag is 'error'
+      if ret.data is ''
+        return loop_val
+      return ret
 
 apply = (fn, args, env) ->
   if fn.tag is 'error'
